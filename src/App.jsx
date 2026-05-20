@@ -2,6 +2,7 @@ import '@xyflow/react/dist/style.css';
 
 import ActionToolbox from './components/ActionToolbox';
 import HelpText from './components/HelpText';
+import ImportRedoRoutesModal from './components/ImportRedoRoutesModal';
 import RedoRoutesModal from './components/RedoRoutesModal';
 import TopologyCanvas from './components/TopologyCanvas';
 import { useTopologyState } from './hooks/useTopologyState';
@@ -23,6 +24,7 @@ function App() {
           onImport={topology.onImport}
           onClearAll={topology.onClearAll}
           onShowRedoRoutes={topology.showRedoRoutes}
+          onShowImportRedoRoutes={topology.showImportRedoRoutes}
           disableAdd={topology.nodes.length >= 127}
           style={{ width: '100%', height: '60px', borderBottom: '1px solid var(--redwood-black)' }}
         />
@@ -46,6 +48,12 @@ function App() {
           <RedoRoutesModal
             statements={topology.dgmgrlStatements}
             onClose={topology.hideRedoRoutes}
+          />
+        )}
+        {topology.showImportRedoRoutesModal && (
+          <ImportRedoRoutesModal
+            onClose={topology.hideImportRedoRoutes}
+            onImport={topology.onImportRedoRoutes}
           />
         )}
       </div>

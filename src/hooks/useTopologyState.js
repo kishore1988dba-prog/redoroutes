@@ -6,6 +6,7 @@ import {
 
 import { initialNodes, initialEdges } from '../data/initialTopology';
 import { normalizeEdges } from '../utils/edgeNormalization';
+import { buildTopologyFromRedoRoutes } from '../utils/redoRoutesImport';
 import { generateDgmgrlStatements } from '../utils/redoRoutes';
 import { deleteStorage, getStorage, setStorage } from '../utils/storage';
 import { getVisibleEdges } from '../utils/topologyValidation';
@@ -36,6 +37,7 @@ export const useTopologyState = () => {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [showRedoRoutesModal, setShowRedoRoutesModal] = useState(false);
+  const [showImportRedoRoutesModal, setShowImportRedoRoutesModal] = useState(false);
 
   useEffect(() => {
     setStorage(STORAGE_KEY, JSON.stringify({ nodes, edges }));
@@ -176,6 +178,14 @@ export const useTopologyState = () => {
     setEdges(normalizeEdges(data.edges || [], importedNodes));
   }, [setNodes, setEdges]);
 
+  const onImportRedoRoutes = useCallback((input) => {
+    const topology = buildTopologyFromRedoRoutes(input);
+    setNodes(topology.nodes);
+    setEdges(normalizeEdges(topology.edges, topology.nodes));
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+  }, [setEdges, setNodes]);
+
   const onClearAll = useCallback(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
@@ -193,6 +203,7 @@ export const useTopologyState = () => {
     selectedEdge,
     selectedIsStandby,
     showRedoRoutesModal,
+    showImportRedoRoutesModal,
     dgmgrlStatements,
     onNodesChange,
     onEdgesChange,
@@ -209,8 +220,11 @@ export const useTopologyState = () => {
     onMakePrimary,
     onExport,
     onImport,
+    onImportRedoRoutes,
     onClearAll,
     showRedoRoutes: () => setShowRedoRoutesModal(true),
     hideRedoRoutes: () => setShowRedoRoutesModal(false),
+    showImportRedoRoutes: () => setShowImportRedoRoutesModal(true),
+    hideImportRedoRoutes: () => setShowImportRedoRoutesModal(false),
   };
 };
