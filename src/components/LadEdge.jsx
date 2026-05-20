@@ -1,7 +1,10 @@
 import React from 'react';
 import { BaseEdge, EdgeLabelRenderer, useStore } from '@xyflow/react';
 
-const getNodeCenter = (node) => {
+const ARROW_TARGET_GAP = 18;
+const ARROW_SOURCE_GAP = 14;
+
+const getNodeGeometry = (node) => {
   if (!node) return null;
 
   const width = node.measured?.width ?? node.width ?? node.initialWidth ?? 0;
@@ -11,6 +14,48 @@ const getNodeCenter = (node) => {
   return {
     x: position.x + width / 2,
     y: position.y + height / 2,
+    height,
+    width,
+  };
+};
+
+const getDistanceToRectEdge = (node, direction) => {
+  if (!node || (!direction.x && !direction.y)) return 0;
+
+  const halfWidth = node.width / 2;
+  const halfHeight = node.height / 2;
+  const distanceToVerticalEdge = direction.x ? halfWidth / Math.abs(direction.x) : Infinity;
+  const distanceToHorizontalEdge = direction.y ? halfHeight / Math.abs(direction.y) : Infinity;
+
+  return Math.min(distanceToVerticalEdge, distanceToHorizontalEdge);
+};
+
+const getArrowPoint = (sourceNode, targetNode) => {
+  const dx = sourceNode.x - targetNode.x;
+  const dy = sourceNode.y - targetNode.y;
+  const length = Math.hypot(dx, dy);
+
+  if (!length) return { x: targetNode.x, y: targetNode.y };
+
+  const directionToSource = {
+    x: dx / length,
+    y: dy / length,
+  };
+  const targetEdgeDistance = getDistanceToRectEdge(targetNode, directionToSource);
+  const sourceEdgeDistance = getDistanceToRectEdge(sourceNode, {
+    x: -directionToSource.x,
+    y: -directionToSource.y,
+  });
+  const idealDistanceFromTargetCenter = targetEdgeDistance + ARROW_TARGET_GAP;
+  const maxDistanceFromTargetCenter = Math.max(
+    targetEdgeDistance,
+    length - sourceEdgeDistance - ARROW_SOURCE_GAP,
+  );
+  const distanceFromTargetCenter = Math.min(idealDistanceFromTargetCenter, maxDistanceFromTargetCenter);
+
+  return {
+    x: targetNode.x + directionToSource.x * distanceFromTargetCenter,
+    y: targetNode.y + directionToSource.y * distanceFromTargetCenter,
   };
 };
 
@@ -28,12 +73,11 @@ const LadEdge = ({
   const targetNode = useStore((store) => store.nodeLookup.get(target));
   const { whenPrimaryName, logXptMode, priority, targetDbUniqueName, isEffective } = data;
   const markerId = `lad-arrow-${id}`;
-  const sourceCenter = getNodeCenter(sourceNode) ?? { x: sourceX, y: sourceY };
-  const targetCenter = getNodeCenter(targetNode) ?? { x: targetX, y: targetY };
+  const sourceCenter = getNodeGeometry(sourceNode) ?? { x: sourceX, y: sourceY, height: 0, width: 0 };
+  const targetCenter = getNodeGeometry(targetNode) ?? { x: targetX, y: targetY, height: 0, width: 0 };
   const labelX = (sourceCenter.x + targetCenter.x) / 2;
   const labelY = (sourceCenter.y + targetCenter.y) / 2;
-  const arrowX = sourceCenter.x + (targetCenter.x - sourceCenter.x) * 0.62;
-  const arrowY = sourceCenter.y + (targetCenter.y - sourceCenter.y) * 0.62;
+  const { x: arrowX, y: arrowY } = getArrowPoint(sourceCenter, targetCenter);
   const edgePath = `M ${sourceCenter.x},${sourceCenter.y} L ${arrowX},${arrowY} L ${targetCenter.x},${targetCenter.y}`;
 
   return (
