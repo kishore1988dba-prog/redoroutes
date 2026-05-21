@@ -11,9 +11,21 @@ function App() {
   const topology = useTopologyState();
 
   return (
-    <>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100dvh',
+      overflow: 'hidden',
+      width: '100vw',
+    }}>
       <HelpText />
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh' }}>
+      <div style={{
+        display: 'flex',
+        flex: '1 1 auto',
+        flexDirection: 'column',
+        minHeight: 0,
+        width: '100%',
+      }}>
         <ActionToolbox
           onAddStandby={topology.onAddStandby}
           onAddFarSync={topology.onAddFarSync}
@@ -26,7 +38,12 @@ function App() {
           onShowRedoRoutes={topology.showRedoRoutes}
           onShowImportRedoRoutes={topology.showImportRedoRoutes}
           disableAdd={topology.nodes.length >= 127}
-          style={{ width: '100%', height: '60px', borderBottom: '1px solid var(--redwood-black)' }}
+          style={{
+            borderBottom: '1px solid var(--redwood-black)',
+            flexShrink: 0,
+            minHeight: '60px',
+            width: '100%',
+          }}
         />
         <TopologyCanvas
           nodes={topology.nodesWithWarnings}
@@ -57,7 +74,7 @@ function App() {
           />
         )}
       </div>
-    </>
+    </div>
   );
 }
 

@@ -34,8 +34,14 @@ const TopologyCanvas = ({
   onUpdateEdge,
 }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'row', height: 'calc(100vh - 60px)' }}>
-      <div style={{ flex: 1, position: 'relative' }}>
+    <div style={{
+      display: 'flex',
+      flex: '1 1 auto',
+      flexDirection: 'row',
+      minHeight: 0,
+      width: '100%',
+    }}>
+      <div style={{ flex: '1 1 auto', minWidth: 0, position: 'relative' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -64,7 +70,12 @@ const TopologyCanvas = ({
         onUpdateEdge={onUpdateEdge}
         edges={allEdges}
         nodes={nodes}
-        style={{ width: '20%', height: '100%', borderLeft: '1px solid var(--redwood-black)' }}
+        style={{
+          borderLeft: '1px solid var(--redwood-black)',
+          height: '100%',
+          overflowY: 'auto',
+          width: '20%',
+        }}
       />
     </div>
   );

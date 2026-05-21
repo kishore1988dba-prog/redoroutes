@@ -28,12 +28,18 @@ a:hover {
   color: #B84F3C;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 640px;
-  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
 }
 
 .react-flow__edges {

@@ -21,7 +21,7 @@ const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onM
   };
 
   const defaultStyle = {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     background: 'var(--redwood-white)',
     border: '1px solid var(--redwood-black)',
     boxSizing: 'border-box',
@@ -39,9 +39,9 @@ const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onM
         alignItems: 'center',
         display: 'flex',
         flex: '1 1 auto',
+        flexWrap: 'wrap',
         gap: '8px',
         minWidth: 0,
-        overflowX: 'auto',
         paddingBottom: '2px',
       }}>
         <button onClick={onAddStandby} disabled={disableAdd}>Add Standby</button>
@@ -94,7 +94,6 @@ const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onM
       <div style={{
         display: 'flex',
         flexShrink: 0,
-        marginLeft: 'auto',
       }}>
         <button onClick={onClearAll}>Clear all</button>
       </div>
