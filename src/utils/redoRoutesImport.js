@@ -52,6 +52,10 @@ const normalizeName = (name) => name.trim().replace(/^["']|["']$/g, '');
 
 const isPlaceholderName = (name) => name.toLowerCase() === 'undefined';
 
+const isKeywordName = (name, keyword) => name.toUpperCase() === keyword;
+
+const isAliasName = (name) => isKeywordName(name, 'LOCAL') || isKeywordName(name, 'ANY');
+
 const parseRouteSpec = (routeSpec, defaultPriority) => {
   const match = routeSpec.trim().match(/^([^\s(),]+)\s+(ASYNC|SYNC|FASTSYNC)(?:\s+PRIORITY\s*=\s*(\d+))?$/i);
   if (!match) throw new Error(`Could not parse route: ${routeSpec}`);
@@ -90,14 +94,106 @@ const parseRoutesForPrimary = (routesText) => {
   return routes;
 };
 
-export const parseRedoRoutesStatements = (input) => {
-  const statements = [];
+const collectDatabaseNames = (statements, members = []) => {
+  const objectTypesByName = new Map();
+
+  members.forEach((member) => {
+    objectTypesByName.set(member.sourceName, getNodeType(member.sourceType));
+  });
+
+  statements.forEach((statement) => {
+    objectTypesByName.set(statement.sourceName, getNodeType(statement.sourceType));
+  });
+
+  const names = new Set();
+  const addDatabaseName = (name) => {
+    if (!name || isAliasName(name) || isPlaceholderName(name)) return;
+
+    const knownType = objectTypesByName.get(name);
+    if (!knownType || knownType === 'DATABASE') names.add(name);
+  };
+
+  members.forEach((member) => {
+    if (getNodeType(member.sourceType) === 'DATABASE') names.add(member.sourceName);
+  });
+
+  statements.forEach((statement) => {
+    if (getNodeType(statement.sourceType) === 'DATABASE') names.add(statement.sourceName);
+    addDatabaseName(statement.whenPrimaryName);
+    addDatabaseName(statement.targetName);
+    addDatabaseName(statement.alternateToName);
+  });
+
+  return [...names].sort();
+};
+
+const expandAliasName = (name, localDatabaseName, databaseNames) => {
+  if (isKeywordName(name, 'LOCAL')) return [localDatabaseName];
+  if (isKeywordName(name, 'ANY')) return databaseNames;
+  return [name];
+};
+
+const expandRouteAliases = (statements, members) => {
+  const databaseNames = collectDatabaseNames(statements, members);
+
+  return statements.flatMap((statement) => {
+    const whenPrimaryNames = expandAliasName(statement.whenPrimaryName, statement.sourceName, databaseNames);
+    const targetNames = expandAliasName(statement.targetName, statement.sourceName, databaseNames);
+    const alternateToNames = statement.alternateToName
+      ? expandAliasName(statement.alternateToName, statement.sourceName, databaseNames)
+      : [null];
+
+    return whenPrimaryNames.flatMap(whenPrimaryName => (
+      targetNames.flatMap(targetName => (
+        alternateToNames.map(alternateToName => ({
+          ...statement,
+          whenPrimaryName,
+          targetName,
+          alternateToName,
+        }))
+      ))
+    ));
+  });
+};
+
+const parseRedoRoutesEntries = (input) => {
+  const entries = [];
+
+  const addEntry = (sourceType, sourceName, routesProperty) => {
+    entries.push({
+      sourceName: normalizeName(sourceName),
+      sourceType: sourceType.toUpperCase(),
+      routesProperty,
+    });
+  };
+
   const statementPattern = /EDIT\s+(DATABASE|FAR_SYNC|RECOVERY_APPLIANCE)\s+([^\s]+)\s+SET\s+PROPERTY\s+RedoRoutes\s*=\s*'([^']*)'\s*;?/gi;
   let match;
 
   while ((match = statementPattern.exec(input)) !== null) {
     const [, sourceType, sourceName, routesProperty] = match;
+    addEntry(sourceType, sourceName, routesProperty);
+  }
 
+  const showPattern = /(?:DGMGRL>\s*)?show\s+(database|far_sync|recovery_appliance)\s+(['"]?[^'"\s;]+['"]?)\s+['"]RedoRoutes['"]\s*;?\s*(?:\r?\n)+\s*RedoRoutes\s*=\s*'([^']*)'/gi;
+  while ((match = showPattern.exec(input)) !== null) {
+    const [, sourceType, sourceName, routesProperty] = match;
+    addEntry(sourceType, sourceName, routesProperty);
+  }
+
+  const showAllMembersPattern = /^\s*([^:\r\n]+?)\s*:\s*RedoRoutes\s*=\s*'([^']*)'\s*$/gim;
+  while ((match = showAllMembersPattern.exec(input)) !== null) {
+    const [, sourceName, routesProperty] = match;
+    addEntry('DATABASE', sourceName, routesProperty);
+  }
+
+  return entries;
+};
+
+const parseRoutesFromEntries = (entries) => {
+  const statements = [];
+
+  entries.forEach(({ sourceName, sourceType, routesProperty }) => {
     readBalancedGroups(routesProperty).forEach((group) => {
       const separatorIndex = group.indexOf(':');
       if (separatorIndex === -1) throw new Error(`Missing primary separator in route group: ${group}`);
@@ -107,20 +203,33 @@ export const parseRedoRoutesStatements = (input) => {
 
       parseRoutesForPrimary(routesText).filter(route => !isPlaceholderName(route.targetName)).forEach((route) => {
         statements.push({
-          sourceName: normalizeName(sourceName),
-          sourceType: sourceType.toUpperCase(),
+          sourceName,
+          sourceType,
           whenPrimaryName,
           ...route,
         });
       });
     });
-  }
+  });
 
-  if (statements.length === 0) {
+  return statements;
+};
+
+const parseRedoRoutesImport = (input) => {
+  const members = parseRedoRoutesEntries(input);
+
+  if (members.length === 0) {
     throw new Error('No RedoRoutes statements were found.');
   }
 
-  return statements;
+  return {
+    members,
+    routes: expandRouteAliases(parseRoutesFromEntries(members), members),
+  };
+};
+
+export const parseRedoRoutesStatements = (input) => {
+  return parseRedoRoutesImport(input).routes;
 };
 
 const getNodeType = (brokerObjectType) => {
@@ -216,9 +325,13 @@ const createForceLayout = (nodes, edges) => {
 };
 
 export const buildTopologyFromRedoRoutes = (input) => {
-  const parsedRoutes = parseRedoRoutesStatements(input);
+  const { members, routes: parsedRoutes } = parseRedoRoutesImport(input);
   const nodeTypesByName = new Map();
   const primaryNames = new Set();
+
+  members.forEach((member) => {
+    nodeTypesByName.set(member.sourceName, getNodeType(member.sourceType));
+  });
 
   parsedRoutes.forEach((route) => {
     nodeTypesByName.set(route.sourceName, getNodeType(route.sourceType));
