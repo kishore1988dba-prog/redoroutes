@@ -15,6 +15,7 @@ The Active Data Guard RedoRoutes Helper lets you:
 - **Add** physical standby, Far Sync, and Recovery Appliance nodes.
 - **Connect** nodes with Log Archive Destination (LAD) edges and configure their basic properties.
 - **Generate** DGMGRL broker statements automatically.
+- **Import** DGMGRL RedoRoutes output or statements, including `LOCAL` and `ANY` route aliases.
 - **Export / Import** topology JSON files.
 - **Validate** the design in real‑time with warnings and errors.
 
@@ -31,16 +32,17 @@ The Active Data Guard RedoRoutes Helper lets you:
 
 ## 📋 Instructions
 
-1. Start by adding standby databases, far syncs, and recovery appliances using the toolbox above.  
-2. Click on every database (or Far Sync or ZDLRA) and set their DB_UNIQUE_NAME to match your environment. You can still rename members after creating connections; redo routes are generated from the current member names.  
-3. Drop the topology by connecting the databases to each other using mouse drag-and-drop. Start from one of the green dots (source) and connect to a database's black dots (target).  
-4. Click on edges (connections) to set properties like LogXptMode, Priority, and Alternate To (this is required when the source has multiple destinations and you need to specify to which of those the current one is alternate).  
-5. Once you complete the topology for one primary database, switch the primary by selecting a standby and clicking "Make Primary" in the toolbox. The visualization will update to show the redo routes for the new primary.  
-6. Once every topology for every potential primary database is complete, click "Show RedoRoutes" to generate the DGMGRL statements needed to configure redo transport routes.  
-7. You can export your topology to a JSON file for later use with this application, or import an existing topology.  
-8. Clear all to start fresh anytime.  
-9. Note: This tool runs entirely in your browser; no data is sent to any server. Data is persisted only in your browser. Clearing the cookies will reset your configuration.  
-10. Enjoy designing your Data Guard topologies with ease! Ideas or issues? Feel free to create issues or pull requests on the [GitHub repository](https://github.com/ludovicocaldara/adg-topology)
+1. Start by adding standby databases, far syncs, and recovery appliances using the toolbox above.
+2. Click on every database (or Far Sync or ZDLRA) and set their DB_UNIQUE_NAME to match your environment. You can still rename members after creating connections; redo routes are generated from the current member names.
+3. Drop the topology by connecting the databases to each other using mouse drag-and-drop. Start from one of the green dots (source) and connect to a database's black dots (target).
+4. Click on edges (connections) to set properties like LogXptMode, Priority, and Alternate To (this is required when the source has multiple destinations and you need to specify to which of those the current one is alternate).
+5. Once you complete the topology for one primary database, switch the primary by selecting a standby and clicking "Make Primary" in the toolbox. The visualization will update to show the redo routes for the new primary.
+6. Once every topology for every potential primary database is complete, click "Show RedoRoutes" to generate the DGMGRL statements needed to configure redo transport routes.
+7. You can import existing RedoRoutes definitions from broker `EDIT ... SET PROPERTY RedoRoutes` statements, `show ... RedoRoutes` output, or member summaries. `LOCAL` and `ANY` aliases are expanded using the databases found in the imported configuration.
+8. You can export your topology to a JSON file for later use with this application, or import an existing topology.
+9. Clear all to start fresh anytime.
+10. Note: This tool runs entirely in your browser; no data is sent to any server. Data is persisted only in your browser. Clearing the cookies will reset your configuration.
+11. Enjoy designing your Data Guard topologies with ease! Ideas or issues? Feel free to create issues or pull requests on the [GitHub repository](https://github.com/ludovicocaldara/adg-topology)
 
 ## Embedded checks
 
@@ -52,7 +54,10 @@ The application does a few sanity checks and raises warnings or disable buttons 
 - No more than 30 destinations from the same source.
 - No more than 127 total members in the configuration.
 - All database members should receive redo.
-- No members can receive from two sources.
+- No members can receive from two simultaneous sources.
+- A cascaded member that depends on a source reached only through an alternate route is flagged because it may not receive redo when that source is inactive.
+
+Alternate routes are evaluated with priority awareness. For example, two Far Sync destinations feeding the same cascaded standby are not treated as simultaneous sources if one Far Sync receives redo only as a lower-priority alternate to the other. If both Far Sync destinations receive redo at the same priority, the cascaded standby is still flagged as receiving from multiple sources.
 
 However, the resulting RedoRoutes do not have the same level of validation as the real Active Data Guard.
 
@@ -96,6 +101,10 @@ npm run build -- --base=/adg-topology/
 
 - **Video Overview** –  
   [Understanding the Oracle Data Guard RedoRoutes property](https://www.youtube.com/watch?v=huG8JPu_s4Q)
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for user-visible changes.
 
 ## 🎨 Visual Design
 

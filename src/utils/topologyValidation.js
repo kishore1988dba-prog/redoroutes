@@ -67,6 +67,28 @@ const receivesAsAlternate = (nodeId, visibleEdges, primaryNodeId) => {
   });
 };
 
+const getSourceActivationTiers = (sourceId, visibleEdges, primaryNodeId) => {
+  if (sourceId === primaryNodeId) return ['PRIMARY'];
+
+  const incoming = visibleEdges.filter(e => e.target === sourceId && e.data.isEffective);
+  if (incoming.length === 0) return [`UNFED:${sourceId}`];
+
+  return incoming.map(e => `PRIORITY:${e.data.priority}`);
+};
+
+const hasConcurrentIncomingSources = (incoming, visibleEdges, primaryNodeId) => {
+  const sourceTiers = incoming.map(edge => getSourceActivationTiers(edge.source, visibleEdges, primaryNodeId));
+
+  for (let i = 0; i < sourceTiers.length; i += 1) {
+    for (let j = i + 1; j < sourceTiers.length; j += 1) {
+      if (sourceTiers[i].includes('PRIMARY') || sourceTiers[j].includes('PRIMARY')) return true;
+      if (sourceTiers[i].some(tier => sourceTiers[j].includes(tier))) return true;
+    }
+  }
+
+  return false;
+};
+
 export const addTopologyWarnings = (nodes, visibleEdges) => {
   const loopNodeIds = findLoopNodes(visibleEdges);
   const primaryNode = nodes.find(n => n.data.role === 'PRIMARY');
@@ -83,7 +105,7 @@ export const addTopologyWarnings = (nodes, visibleEdges) => {
         warning = 'does not receive redo';
       } else if (effectiveIncoming.length === 1 && receivesAsAlternate(effectiveIncoming[0].source, visibleEdges, primaryNode?.id)) {
         warning = 'may not receive redo if source is alternate';
-      } else if (effectiveIncoming.filter(e => !receivesAsAlternate(e.source, visibleEdges, primaryNode?.id)).length > 1) {
+      } else if (hasConcurrentIncomingSources(effectiveIncoming, visibleEdges, primaryNode?.id)) {
         warning = 'cannot receive from multiple sources';
       }
     }
