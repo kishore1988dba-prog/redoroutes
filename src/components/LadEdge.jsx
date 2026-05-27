@@ -67,6 +67,7 @@ const LadEdge = ({
   sourceY,
   targetX,
   targetY,
+  selected,
   data,
 }) => {
   const sourceNode = useStore((store) => store.nodeLookup.get(source));
@@ -79,6 +80,7 @@ const LadEdge = ({
   const labelY = (sourceCenter.y + targetCenter.y) / 2;
   const { x: arrowX, y: arrowY } = getArrowPoint(sourceCenter, targetCenter);
   const edgePath = `M ${sourceCenter.x},${sourceCenter.y} L ${arrowX},${arrowY} L ${targetCenter.x},${targetCenter.y}`;
+  const strokeWidth = selected ? 2.5 : 1.5;
 
   return (
     <>
@@ -101,7 +103,7 @@ const LadEdge = ({
         markerMid={`url(#${markerId})`}
         style={{
           stroke: 'var(--redwood-black)',
-          strokeWidth: 1.5,
+          strokeWidth,
           strokeDasharray: isEffective ? 'none' : '5,5',
         }}
       />
@@ -115,7 +117,8 @@ const LadEdge = ({
             background: 'var(--redwood-white)',
             padding: '2px 4px',
             borderRadius: '3px',
-            border: '1px solid var(--redwood-black)',
+            border: `${selected ? 2 : 1}px solid var(--redwood-black)`,
+            fontWeight: selected ? 700 : 400,
           }}
           className="nodrag nopan"
         >

@@ -1,7 +1,27 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
 const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onMakePrimary, selectedIsStandby, onExport, onImport, onClearAll, onShowRedoRoutes, onShowImportRedoRoutes, disableAdd, style }) => {
   const fileInputRef = useRef(null);
+  const [isImportExportOpen, setIsImportExportOpen] = useState(false);
+
+  const closeImportExport = () => {
+    setIsImportExportOpen(false);
+  };
+
+  const handleExport = () => {
+    closeImportExport();
+    onExport();
+  };
+
+  const handleImportClick = () => {
+    closeImportExport();
+    fileInputRef.current?.click();
+  };
+
+  const handleShowImportRedoRoutes = () => {
+    closeImportExport();
+    onShowImportRedoRoutes();
+  };
 
   const handleImport = (e) => {
     const file = e.target.files[0];
@@ -50,7 +70,11 @@ const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onM
         <button onClick={onMakePrimary} disabled={!selectedIsStandby}>Make Primary</button>
         <button onClick={onShowRedoRoutes}>Show RedoRoutes</button>
       </div>
-      <details style={{ flexShrink: 0, position: 'relative' }}>
+      <details
+        open={isImportExportOpen}
+        onToggle={(e) => setIsImportExportOpen(e.currentTarget.open)}
+        style={{ flexShrink: 0, position: 'relative' }}
+      >
         <summary style={{
           backgroundColor: '#FCFBFA',
           border: '1px solid transparent',
@@ -79,9 +103,9 @@ const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onM
           width: '190px',
           zIndex: 1001,
         }}>
-          <button onClick={onExport}>Export JSON</button>
-          <button onClick={() => fileInputRef.current?.click()}>Import JSON</button>
-          <button onClick={onShowImportRedoRoutes}>Import RedoRoutes</button>
+          <button onClick={handleExport}>Export JSON</button>
+          <button onClick={handleImportClick}>Import JSON</button>
+          <button onClick={handleShowImportRedoRoutes}>Import RedoRoutes</button>
         </div>
       </details>
       <input

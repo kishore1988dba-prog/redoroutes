@@ -48,7 +48,13 @@ export const useTopologyState = () => {
   const currentPrimary = nodes.find(n => n.data.role === 'PRIMARY');
   const selectedIsStandby = selectedNode && selectedNode.data.role === 'PHYSICAL_STANDBY';
 
-  const visibleEdges = useMemo(() => getVisibleEdges(edges, currentPrimary, nodes), [edges, currentPrimary, nodes]);
+  const visibleEdges = useMemo(
+    () => getVisibleEdges(edges, currentPrimary, nodes).map(edge => ({
+      ...edge,
+      selected: edge.id === selectedEdgeId,
+    })),
+    [edges, currentPrimary, nodes, selectedEdgeId]
+  );
   const nodesWithWarnings = useTopologyWarnings(nodes, visibleEdges);
   const dgmgrlStatements = useMemo(() => generateDgmgrlStatements(nodes, edges), [nodes, edges]);
 
@@ -97,6 +103,8 @@ export const useTopologyState = () => {
 
       console.log('New edge:', newEdge);
       setEdges((eds) => [...eds, newEdge]);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(newEdge.id);
     },
     [nodes, setEdges]
   );
