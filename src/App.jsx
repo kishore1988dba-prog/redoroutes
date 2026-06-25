@@ -37,6 +37,8 @@ function App() {
           onClearAll={topology.onClearAll}
           onShowRedoRoutes={topology.showRedoRoutes}
           onShowImportRedoRoutes={topology.showImportRedoRoutes}
+          onDeleteSelected={topology.onDeleteSelected}
+          hasSelection={Boolean(topology.selectedNode || topology.selectedEdge)}
           disableAdd={topology.nodes.length >= 127}
           style={{
             borderBottom: '1px solid var(--redwood-black)',
