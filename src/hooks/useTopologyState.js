@@ -124,6 +124,21 @@ export const useTopologyState = () => {
 
   const onEdgesDelete = useCallback(() => {}, []);
 
+  const onDeleteSelected = useCallback(() => {
+    if (selectedNodeId) {
+      const nodeToDelete = nodes.find(n => n.id === selectedNodeId);
+      if (nodeToDelete) {
+        onNodesDelete([nodeToDelete]);
+        setEdges(eds => eds.filter(e => e.source !== selectedNodeId && e.target !== selectedNodeId));
+        setNodes(nds => nds.filter(n => n.id !== selectedNodeId));
+      }
+      setSelectedNodeId(null);
+    } else if (selectedEdgeId) {
+      setEdges(eds => eds.filter(e => e.id !== selectedEdgeId));
+      setSelectedEdgeId(null);
+    }
+  }, [selectedNodeId, selectedEdgeId, nodes, onNodesDelete, setNodes, setEdges]);
+
   const onAddStandby = useCallback(() => {
     const primary = nodes.find(n => n.data.role === 'PRIMARY');
     if (!primary) return;
@@ -220,6 +235,7 @@ export const useTopologyState = () => {
     onEdgeClick,
     onNodesDelete,
     onEdgesDelete,
+    onDeleteSelected,
     onUpdateNode,
     onUpdateEdge,
     onAddStandby,
