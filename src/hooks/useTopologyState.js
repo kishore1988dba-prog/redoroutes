@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   useNodesState,
   useEdgesState,
@@ -39,9 +39,60 @@ export const useTopologyState = () => {
   const [showRedoRoutesModal, setShowRedoRoutesModal] = useState(false);
   const [showImportRedoRoutesModal, setShowImportRedoRoutesModal] = useState(false);
 
-  useEffect(() => {
+useEffect(() => {
     setStorage(STORAGE_KEY, JSON.stringify({ nodes, edges }));
   }, [nodes, edges]);
+
+  // --- Undo/Redo history ---
+  const historyRef = useRef({ past: [], future: [], isApplying: false });
+  const [historyVersion, setHistoryVersion] = useState(0);
+
+  useEffect(() => {
+    const h = historyRef.current;
+    if (h.isApplying) { h.isApplying = false; return; }
+    const snapshot = JSON.stringify({ nodes, edges });
+    if (h.last === snapshot) return;
+    if (h.last !== undefined) {
+      h.past.push(h.last);
+      if (h.past.length > 50) h.past.shift();
+      h.future = [];
+    }
+    h.last = snapshot;
+    setHistoryVersion(v => v + 1);
+  }, [nodes, edges]);
+
+  const undo = useCallback(() => {
+    const h = historyRef.current;
+    if (h.past.length === 0) return;
+    const previous = h.past.pop();
+    h.future.unshift(h.last);
+    h.last = previous;
+    h.isApplying = true;
+    const data = JSON.parse(previous);
+    setNodes(data.nodes);
+    setEdges(data.edges);
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setHistoryVersion(v => v + 1);
+  }, [setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    const h = historyRef.current;
+    if (h.future.length === 0) return;
+    const next = h.future.shift();
+    h.past.push(h.last);
+    h.last = next;
+    h.isApplying = true;
+    const data = JSON.parse(next);
+    setNodes(data.nodes);
+    setEdges(data.edges);
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setHistoryVersion(v => v + 1);
+  }, [setNodes, setEdges]);
+
+  const canUndo = historyRef.current.past.length > 0;
+  const canRedo = historyRef.current.future.length > 0;
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
   const selectedEdge = edges.find(e => e.id === selectedEdgeId);
@@ -244,8 +295,12 @@ export const useTopologyState = () => {
     onMakePrimary,
     onExport,
     onImport,
-    onImportRedoRoutes,
-    onClearAll,
+    onImportRedoRoutes,onClearAll,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyVersion,
     showRedoRoutes: () => setShowRedoRoutesModal(true),
     hideRedoRoutes: () => setShowRedoRoutesModal(false),
     showImportRedoRoutes: () => setShowImportRedoRoutesModal(true),
