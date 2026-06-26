@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 
-const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onMakePrimary, selectedIsStandby, onExport, onImport, onClearAll, onShowRedoRoutes, onShowImportRedoRoutes, onDeleteSelected, hasSelection, disableAdd, style }) => {
+const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onMakePrimary, selectedIsStandby, onExport, onImport, onClearAll, onShowRedoRoutes, onShowImportRedoRoutes, onDeleteSelected, hasSelection, onUndo, onRedo, canUndo, canRedo, disableAdd, style }) => {
   const fileInputRef = useRef(null);
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
 
@@ -69,6 +69,8 @@ const ActionToolbox = ({ onAddStandby, onAddFarSync, onAddRecoveryAppliance, onM
         <button onClick={onAddRecoveryAppliance} disabled={disableAdd}>Add Recovery Appliance</button>
         <button onClick={onMakePrimary} disabled={!selectedIsStandby}>Make Primary</button>
         <button onClick={onShowRedoRoutes}>Show RedoRoutes</button>
+        <button onClick={onUndo} disabled={!canUndo}>Undo</button>
+        <button onClick={onRedo} disabled={!canRedo}>Redo</button>
         <button onClick={onDeleteSelected} disabled={!hasSelection}>Delete Selected</button>
       </div>
       <details
